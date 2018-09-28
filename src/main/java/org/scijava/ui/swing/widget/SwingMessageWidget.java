@@ -30,11 +30,17 @@
 
 package org.scijava.ui.swing.widget;
 
-import javax.swing.JLabel;
+import java.io.IOException;
+import javax.swing.JEditorPane;
 import javax.swing.JPanel;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 
 import org.scijava.Priority;
+import org.scijava.platform.PlatformService;
+import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.thread.ThreadService;
 import org.scijava.widget.InputWidget;
 import org.scijava.widget.MessageWidget;
 import org.scijava.widget.WidgetModel;
@@ -48,8 +54,13 @@ import org.scijava.widget.WidgetModel;
 public class SwingMessageWidget extends SwingInputWidget<String> implements
 	MessageWidget<JPanel>
 {
+	@Parameter
+	private PlatformService platformService;
 
-	private JLabel label;
+	@Parameter
+	private ThreadService threadService;
+
+	private JEditorPane pane;
 
 	// -- InputWidget methods --
 
@@ -77,8 +88,25 @@ public class SwingMessageWidget extends SwingInputWidget<String> implements
 
 		final String text = model.getText();
 
-		label = new JLabel(text);
-		getComponent().add(label);
+		pane = new JEditorPane("text/html", text);
+		pane.setEditable(false);
+		pane.setOpaque(false);
+		pane.addHyperlinkListener(new HyperlinkListener() {
+
+			@Override
+			public void hyperlinkUpdate(HyperlinkEvent hle) {
+				if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) {
+					try {
+						platformService.open(hle.getURL());
+					}
+					catch (IOException exc) {
+						// TODO Auto-generated catch block
+						exc.printStackTrace();
+					}
+				}
+			}
+		});
+		getComponent().add(pane);
 	}
 
 	// -- Typed methods --
@@ -93,6 +121,6 @@ public class SwingMessageWidget extends SwingInputWidget<String> implements
 	@Override
 	public void doRefresh() {
 		// maybe dialog owner changed message content
-		label.setText(get().getText());
+		pane.setText(get().getText());
 	}
 }
